@@ -1844,7 +1844,7 @@ function MeterReadings({ user, currentVillage }) {
               alignItems: 'center',
               marginBottom: '20px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>ถ่ายรูปมิเตอร์</h3>
+              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>อัพโหลดรูปมิเตอร์</h3>
               <button
                 className="close-camera-btn"
                 onClick={stopCamera}
@@ -1900,7 +1900,7 @@ function MeterReadings({ user, currentVillage }) {
                   cursor: 'pointer'
                 }}
               >
-                📷 ถ่ายรูป
+                📷 อัพโหลดรูปมิเตอร์
               </button>
               <button
                 className="cancel-camera-btn"
@@ -2070,7 +2070,7 @@ function MeterReadings({ user, currentVillage }) {
                           cursor: 'pointer'
                         }}
                       >
-                        📷 ถ่ายรูปมิเตอร์
+                        📷 อัพโหลดรูปมิเตอร์
                       </button>
                     </div>
                   )}
