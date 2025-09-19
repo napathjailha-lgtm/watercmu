@@ -9,7 +9,7 @@ import { billingService } from '../services/api';
 // กำหนดค่า API URL
 const API_BASE_URL = 'https://api.abchomey.com/api';
 
-// DataTable Component
+// DataTable Component (ไม่มีการเปลี่ยนแปลง)
 const MeterReadingsDataTable = ({ user, currentVillage, readings, onReadingClick, onVerifyReading, onExportCSV, onPrintBill, loading }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -945,12 +945,9 @@ function MeterReadings({ user, currentVillage }) {
     type: 'success'
   });
 
-  // States สำหรับการถ่ายรูป
-  const [showCamera, setShowCamera] = useState(false);
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [stream, setStream] = useState(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  // States สำหรับการอัพโหลดรูป (เปลี่ยนจากการถ่ายรูป)
+  const [selectedImage, setSelectedImage] = useState(null);
+  const fileInputRef = useRef(null);
 
   const months = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -973,80 +970,39 @@ function MeterReadings({ user, currentVillage }) {
     }
   }, [readingPeriod, currentVillage]);
 
-  // ปิดกล้องเมื่อ component unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
+  // ฟังก์ชันเลือกไฟล์รูปภาพ
+  const handleImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // ตรวจสอบประเภทไฟล์
+      if (!file.type.startsWith('image/')) {
+        showNotification('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+        return;
+      }
 
-  // ฟังก์ชันเปิดกล้อง
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+      // ตรวจสอบขนาดไฟล์ (ไม่เกิน 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showNotification('ขนาดไฟล์ต้องไม่เกิน 5MB', 'error');
+        return;
+      }
+
+      const imageUrl = URL.createObjectURL(file);
+      setSelectedImage({
+        file: file,
+        url: imageUrl
       });
-
-      setStream(mediaStream);
-      setShowCamera(true);
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      }, 100);
-
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      showNotification('ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาต', 'error');
     }
   };
 
-  // ฟังก์ชันปิดกล้อง
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+  // ฟังก์ชันลบรูปที่เลือก
+  const removeSelectedImage = () => {
+    if (selectedImage?.url) {
+      URL.revokeObjectURL(selectedImage.url);
     }
-    setShowCamera(false);
-  };
-
-  // ฟังก์ชันถ่ายรูป
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
-      canvas.toBlob((blob) => {
-        const imageUrl = URL.createObjectURL(blob);
-        setCapturedImage({
-          blob: blob,
-          url: imageUrl,
-          file: new File([blob], `meter-${selectedMeter?.meterNumber}-${Date.now()}.jpg`, {
-            type: 'image/jpeg'
-          })
-        });
-        stopCamera();
-      }, 'image/jpeg', 0.8);
+    setSelectedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-  };
-
-  // ฟังก์ชันลบรูปที่ถ่าย
-  const removeCapturedImage = () => {
-    if (capturedImage?.url) {
-      URL.revokeObjectURL(capturedImage.url);
-    }
-    setCapturedImage(null);
   };
 
   // ฟังก์ชัน Export CSV
@@ -1228,7 +1184,7 @@ function MeterReadings({ user, currentVillage }) {
     }));
   };
 
-  // PDF Generation Functions
+  // PDF Generation Functions (ไม่มีการเปลี่ยนแปลง)
   const drawInvoiceVerticalHalfPage = async (doc, bill, village, offsetY) => {
     const totalPageWidth = doc.internal.pageSize.getWidth();
     const singleInvoiceHeight = doc.internal.pageSize.getHeight() / 2;
@@ -1574,13 +1530,12 @@ function MeterReadings({ user, currentVillage }) {
     setSelectedMeter(meter);
     setShowReadingForm(true);
     if (meter.photoUrl) {
-      setCapturedImage({
+      setSelectedImage({
         url: meter.photoUrl,
-        blob: null,
         file: null
       });
     } else {
-      setCapturedImage(null);
+      setSelectedImage(null);
     }
   };
 
@@ -1595,12 +1550,10 @@ function MeterReadings({ user, currentVillage }) {
     try {
       let photoUrl = null;
 
-      if (capturedImage?.file) {
-        photoUrl = await uploadImage(capturedImage.file);
-      }
-
-      if (capturedImage?.url) {
-        photoUrl = capturedImage.url;
+      if (selectedImage?.file) {
+        photoUrl = await uploadImage(selectedImage.file);
+      } else if (selectedImage?.url) {
+        photoUrl = selectedImage.url;
       }
 
       const readingData = {
@@ -1630,7 +1583,7 @@ function MeterReadings({ user, currentVillage }) {
         showNotification('บันทึกค่ามิเตอร์เรียบร้อยแล้ว', 'success');
         setShowReadingForm(false);
         setSelectedMeter(null);
-        removeCapturedImage();
+        removeSelectedImage();
       } else {
         throw new Error(response.data?.message || 'ไม่สามารถบันทึกค่ามิเตอร์ได้');
       }
@@ -1816,112 +1769,6 @@ function MeterReadings({ user, currentVillage }) {
         />
       </div>
 
-      {/* Camera Modal */}
-      {showCamera && (
-        <div className="camera-modal" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.9)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div className="camera-container" style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '20px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div className="camera-header" style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>อัพโหลดรูปมิเตอร์</h3>
-              <button
-                className="close-camera-btn"
-                onClick={stopCamera}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '2rem',
-                  cursor: 'pointer',
-                  color: '#666'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="camera-body">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="camera-video"
-                style={{
-                  width: '100%',
-                  maxWidth: '500px',
-                  height: 'auto',
-                  borderRadius: '8px',
-                  display: 'block',
-                  margin: '0 auto'
-                }}
-              />
-              <canvas
-                ref={canvasRef}
-                style={{ display: 'none' }}
-              />
-            </div>
-
-            <div className="camera-controls" style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '15px',
-              marginTop: '20px'
-            }}>
-              <button
-                className="capture-btn"
-                onClick={capturePhoto}
-                style={{
-                  background: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '1rem',
-                  cursor: 'pointer'
-                }}
-              >
-                📷 อัพโหลดรูปมิเตอร์
-              </button>
-              <button
-                className="cancel-camera-btn"
-                onClick={stopCamera}
-                style={{
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '6px',
-                  fontSize: '1rem',
-                  cursor: 'pointer'
-                }}
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Reading Form Modal */}
       {showReadingForm && selectedMeter && (
         <div className="modal-overlay">
@@ -1933,7 +1780,7 @@ function MeterReadings({ user, currentVillage }) {
                 onClick={() => {
                   setShowReadingForm(false);
                   setSelectedMeter(null);
-                  removeCapturedImage();
+                  removeSelectedImage();
                 }}
                 disabled={loading}
               >
@@ -1987,7 +1834,7 @@ function MeterReadings({ user, currentVillage }) {
                 ></textarea>
               </div>
 
-              {/* Photo Section */}
+              {/* Photo Section - เปลี่ยนจากกล้องเป็นอัพโหลดไฟล์ */}
               <div className="form-group">
                 <label>รูปภาพมิเตอร์:</label>
                 <div className="photo-section" style={{
@@ -1996,16 +1843,16 @@ function MeterReadings({ user, currentVillage }) {
                   padding: '20px',
                   textAlign: 'center'
                 }}>
-                  {capturedImage ? (
-                    <div className="captured-image" style={{
+                  {selectedImage ? (
+                    <div className="selected-image" style={{
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: '15px'
                     }}>
                       <img
-                        src={capturedImage.url}
-                        alt="รูปที่ถ่าย"
+                        src={selectedImage.url}
+                        alt="รูปที่เลือก"
                         className="preview-image"
                         style={{
                           maxWidth: '300px',
@@ -2018,11 +1865,8 @@ function MeterReadings({ user, currentVillage }) {
                       <div className="image-controls" style={{ display: 'flex', gap: '10px' }}>
                         <button
                           type="button"
-                          className="retake-btn"
-                          onClick={() => {
-                            removeCapturedImage();
-                            startCamera();
-                          }}
+                          className="change-image-btn"
+                          onClick={() => fileInputRef.current?.click()}
                           disabled={loading}
                           style={{
                             background: '#28a745',
@@ -2033,12 +1877,12 @@ function MeterReadings({ user, currentVillage }) {
                             cursor: 'pointer'
                           }}
                         >
-                          📷 ถ่ายใหม่
+                          📁 เปลี่ยนรูป
                         </button>
                         <button
                           type="button"
                           className="remove-photo-btn"
-                          onClick={removeCapturedImage}
+                          onClick={removeSelectedImage}
                           disabled={loading}
                           style={{
                             background: '#dc3545',
@@ -2058,8 +1902,8 @@ function MeterReadings({ user, currentVillage }) {
                       <p style={{ color: '#666', marginBottom: '15px' }}>ยังไม่มีรูปภาพ</p>
                       <button
                         type="button"
-                        className="take-photo-btn"
-                        onClick={startCamera}
+                        className="upload-photo-btn"
+                        onClick={() => fileInputRef.current?.click()}
                         disabled={loading}
                         style={{
                           background: '#28a745',
@@ -2070,10 +1914,20 @@ function MeterReadings({ user, currentVillage }) {
                           cursor: 'pointer'
                         }}
                       >
-                        📷 อัพโหลดรูปมิเตอร์
+                        📁 อัพโหลดรูปมิเตอร์
                       </button>
                     </div>
                   )}
+                  
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    style={{ display: 'none' }}
+                    disabled={loading}
+                  />
                 </div>
               </div>
 
@@ -2084,7 +1938,7 @@ function MeterReadings({ user, currentVillage }) {
                   onClick={() => {
                     setShowReadingForm(false);
                     setSelectedMeter(null);
-                    removeCapturedImage();
+                    removeSelectedImage();
                   }}
                   disabled={loading}
                 >
