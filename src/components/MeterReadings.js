@@ -520,9 +520,9 @@ const MeterReadingsDataTable = ({ user, currentVillage, readings, onReadingClick
                 </td>
               </tr>
             ) : (
-              currentData.map((meter) => (
+              currentData.map((meter, index) => (
                 <tr 
-                  key={meter.meterId} 
+                  key={`${meter.meterId}-${meter.id || index}`} 
                   style={{
                     borderBottom: '1px solid #f3f4f6',
                     transition: 'background-color 0.2s'
