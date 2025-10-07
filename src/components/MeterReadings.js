@@ -521,6 +521,7 @@ const MeterReadingsDataTable = ({ user, currentVillage, readings, onReadingClick
               </tr>
             ) : (
               currentData.map((meter, index) => (
+                console.log(meter),
                 <tr 
                   key={`${meter.meterId}-${meter.id || index}`} 
                   style={{
@@ -1071,11 +1072,11 @@ function MeterReadings({ user, currentVillage }) {
   // ฟังก์ชันอัพโหลดรูป
   const uploadImage = async (file) => {
     const formData = new FormData();
-    formData.append('meter_photo', file);
+    formData.append('image', file);
     formData.append('meter_id', selectedMeter.meterId);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/upload/meter-photo`, formData, {
+      const response = await axios.post(`${API_BASE_URL}/uploads/image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -1539,61 +1540,61 @@ function MeterReadings({ user, currentVillage }) {
     }
   };
 
-  const handleReadingSubmit = async (e) => {
-    e.preventDefault();
+const handleReadingSubmit = async (e) => {
+  e.preventDefault(); // ⬅️ ต้องเอากลับมา! สำคัญมาก
 
-    const readingValue = parseInt(e.target.reading.value);
-    const note = e.target.note.value;
+  const readingValue = parseFloat(e.target.reading.value); // ⬅️ เปลี่ยนเป็น parseFloat
+  const note = e.target.note.value;
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      let photoUrl = null;
+  try {
+    let photoUrl = null;
 
-      if (selectedImage?.file) {
-        photoUrl = await uploadImage(selectedImage.file);
-      } else if (selectedImage?.url) {
-        photoUrl = selectedImage.url;
-      }
-
-      const readingData = {
-        meter_id: selectedMeter.meterId,
-        current_reading: readingValue,
-        previous_reading: selectedMeter.previousReading || 0,
-        usage: readingValue - (selectedMeter.previousReading || 0),
-        read_date: new Date().toISOString().split('T')[0],
-        month: readingPeriod.month,
-        year: readingPeriod.year,
-        note: note,
-        reader_id: user.user_id,
-        photo_url: photoUrl,
-        reading_image: photoUrl
-      };
-
-      let response;
-
-      if (selectedMeter.id && selectedMeter.currentReading !== null) {
-        response = await api.put(`/readings/${selectedMeter.id}`, readingData);
-      } else {
-        response = await api.post('/readings', readingData);
-      }
-
-      if (response.data && response.data.success) {
-        await fetchMeterReadings();
-        showNotification('บันทึกค่ามิเตอร์เรียบร้อยแล้ว', 'success');
-        setShowReadingForm(false);
-        setSelectedMeter(null);
-        removeSelectedImage();
-      } else {
-        throw new Error(response.data?.message || 'ไม่สามารถบันทึกค่ามิเตอร์ได้');
-      }
-    } catch (err) {
-      console.error('Error saving meter reading:', err);
-      showNotification('เกิดข้อผิดพลาด: ' + (err.response?.data?.message || err.message), 'error');
-    } finally {
-      setLoading(false);
+    if (selectedImage?.file) {
+      photoUrl = await uploadImage(selectedImage.file);
+    } else if (selectedImage?.url) {
+      photoUrl = selectedImage.url;
     }
-  };
+
+    const readingData = {
+      meter_id: selectedMeter.meterId,
+      current_reading: readingValue,
+      previous_reading: selectedMeter.previousReading || 0,
+      usage: readingValue - (selectedMeter.previousReading || 0), // อนุญาตค่าติดลบ
+      read_date: new Date().toISOString().split('T')[0],
+      month: readingPeriod.month,
+      year: readingPeriod.year,
+      note: note,
+      reader_id: user.user_id,
+      photo_url: photoUrl,
+      reading_image: photoUrl
+    };
+
+    let response;
+
+    if (selectedMeter.id && selectedMeter.currentReading !== null) {
+      response = await api.put(`/readings/${selectedMeter.id}`, readingData);
+    } else {
+      response = await api.post('/readings', readingData);
+    }
+
+    if (response.data && response.data.success) {
+      await fetchMeterReadings();
+      showNotification('บันทึกค่ามิเตอร์เรียบร้อยแล้ว', 'success');
+      setShowReadingForm(false);
+      setSelectedMeter(null);
+      removeSelectedImage();
+    } else {
+      throw new Error(response.data?.message || 'ไม่สามารถบันทึกค่ามิเตอร์ได้');
+    }
+  } catch (err) {
+    console.error('Error saving meter reading:', err);
+    showNotification('เกิดข้อผิดพลาด: ' + (err.response?.data?.message || err.message), 'error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const verifyReading = async (id) => {
     setLoading(true);
@@ -1805,24 +1806,12 @@ function MeterReadings({ user, currentVillage }) {
                   type="number"
                   name="reading"
                   defaultValue={selectedMeter.currentReading || ''}
-                  min={selectedMeter.previousReading || 0}
-                  step="0.01"
+                  step="any"
                   required
                   disabled={loading}
-                  onInvalid={(e) => {
-                    if (e.target.validity.rangeUnderflow) {
-                      e.target.setCustomValidity(`ค่ามิเตอร์ต้องมากกว่าหรือเท่ากับ ${selectedMeter.previousReading || 0}`);
-                    } else {
-                      e.target.setCustomValidity('');
-                    }
-                  }}
-                  onInput={(e) => {
-                    e.target.setCustomValidity('');
-                  }}
+                 
                 />
-                <div className="hint">
-                  * ค่ามิเตอร์ต้องมากกว่าหรือเท่ากับค่าก่อนหน้า ({formatNumber(selectedMeter.previousReading) || '0'})
-                </div>
+                
               </div>
 
               <div className="form-group">

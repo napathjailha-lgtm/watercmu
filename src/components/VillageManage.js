@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Box, 
-  Button, 
-  TextField, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
+import {
+  Typography,
+  Box,
+  Button,
+  TextField,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
   TableRow,
   Dialog,
   DialogActions,
@@ -29,7 +29,14 @@ import {
   Chip,
   Autocomplete,
   Grid,
-  Divider
+  Divider,
+  Switch,           // เพิ่ม
+  FormControlLabel, // เพิ่ม
+  FormControl,      // เพิ่ม
+  FormLabel,        // เพิ่ม
+  RadioGroup,       // เพิ่ม
+  Radio,            // เพิ่ม
+  FormHelperText    // เพิ่ม
 } from '@mui/material';
 
 // Icons
@@ -47,6 +54,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import axios from 'axios';
+import CalculateIcon from '@mui/icons-material/Calculate';
 
 // สร้างเมนูของระบบ
 const menuItems = [
@@ -75,7 +83,7 @@ const useAddressData = () => {
     const loadAddressData = async () => {
       try {
         setLoading(true);
-        
+
         // โหลดข้อมูลทั้งหมดพร้อมกัน
         const [provincesRes, amphuresRes, tambonsRes] = await Promise.all([
           fetch('/data/province.json'),
@@ -155,10 +163,10 @@ const useAddressData = () => {
 };
 
 // Component สำหรับเลือกที่อยู่ด้วย Material-UI
-const AddressSelector = ({ 
+const AddressSelector = ({
   value = {},
   onChange,
-  disabled = false 
+  disabled = false
 }) => {
   const {
     provinces,
@@ -207,7 +215,7 @@ const AddressSelector = ({
     setSelectedProvince(newValue);
     setSelectedAmphure(null);
     setSelectedTambon(null);
-    
+
     if (newValue) {
       loadAmphures(newValue.id);
       onChange({
@@ -230,7 +238,7 @@ const AddressSelector = ({
   const handleAmphureChange = (event, newValue) => {
     setSelectedAmphure(newValue);
     setSelectedTambon(null);
-    
+
     if (newValue) {
       loadTambons(newValue.id);
       onChange({
@@ -252,7 +260,7 @@ const AddressSelector = ({
   // จัดการการเลือกตำบล
   const handleTambonChange = (event, newValue) => {
     setSelectedTambon(newValue);
-    
+
     if (newValue) {
       setPostalCode(newValue.zip_code);
       onChange({
@@ -275,17 +283,17 @@ const AddressSelector = ({
   const handlePostalCodeChange = (event) => {
     const code = event.target.value;
     setPostalCode(code);
-    
+
     if (code.length === 5) {
       const addressData = getAddressByPostalCode(code);
       if (addressData) {
         setSelectedProvince(addressData.province);
         setSelectedAmphure(addressData.amphure);
         setSelectedTambon(addressData.tambon);
-        
+
         loadAmphures(addressData.province.id);
         loadTambons(addressData.amphure.id);
-        
+
         onChange({
           province: addressData.province.name_th,
           district: addressData.amphure.name_th,
@@ -295,7 +303,7 @@ const AddressSelector = ({
         return;
       }
     }
-    
+
     onChange({
       province: selectedProvince?.name_th || '',
       district: selectedAmphure?.name_th || '',
@@ -310,9 +318,9 @@ const AddressSelector = ({
         <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
         <Typography variant="h6">ข้อมูลที่อยู่</Typography>
       </Box>
-      
-   
-       <Box sx={{ width: '100%' }}>
+
+
+      <Box sx={{ width: '100%' }}>
         <Grid container spacing={4}>
           <Grid item xs={12} sx={{ minWidth: '300px' }}>
             <Autocomplete
@@ -357,7 +365,7 @@ const AddressSelector = ({
               )}
             />
           </Grid>
-          
+
           <Grid item xs={12} sx={{ minWidth: '300px' }}>
             <Autocomplete
               value={selectedAmphure}
@@ -394,7 +402,7 @@ const AddressSelector = ({
               )}
             />
           </Grid>
-          
+
           <Grid item xs={12} sx={{ minWidth: '300px' }}>
             <Autocomplete
               value={selectedTambon}
@@ -431,7 +439,7 @@ const AddressSelector = ({
               )}
             />
           </Grid>
-          
+
           <Grid item xs={12} sx={{ minWidth: '300px' }}>
             <TextField
               label="รหัสไปรษณีย์"
@@ -481,7 +489,9 @@ const VillageManagement = () => {
     payment_due_date: '15',
     bank_name: '',
     account_number: '',
-    collector_name: ''
+    collector_name: '',
+    use_decimal_readings: false,
+    decimal_places: 0
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -510,78 +520,81 @@ const VillageManagement = () => {
 
   // ดึงข้อมูลหมู่บ้านจาก API
   const fetchVillages = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // เรียกใช้ endpoint GET /villages
-      const response = await api.get('/villages', {
-        params: {
-          page: page + 1, // API อาจใช้ 1-based pagination
-          limit: rowsPerPage
-        }
-      });
-      console.log(response)
-      if (response.data && response.data.success) {
-        // ปรับ format ข้อมูลให้ตรงกับโครงสร้างที่ต้องการ
-        const formattedVillages = response.data.data.map(village => ({
-          id: village.village_id,
-          village_id: village.village_id,
-          name: village.village_name,
-          village_code: village.village_code || '',
-          office_address: village.office_address || '',
-          village_number: village.village_number || '',
-          sub_district: village.sub_district || '',
-          district: village.district || '',
-          province: village.province || '',
-          postal_code: village.postal_code || '',
-          village_head: village.village_head || '',
-          village_head_email: village.village_head_email || '',
-          village_head_phone: village.village_head_phone || '',
-          contact_person: village.contact_person || '',
-          contact_email: village.contact_email || '',
-          contact_phone: village.contact_phone || '',
-          default_rate_per_unit: village.default_rate_per_unit || 30,
-          meter_rental_fee: village.meter_rental_fee || 20,
-          payment_due_date: village.payment_due_date || '15',
-          bank_name: village.bank_name || '',
-          account_number: village.account_number || '',
-          collector_name: village.collector_name || '',
-          // Stats from API
-          total_residents: village.total_residents || 0,
-          active_residents: village.active_residents || 0,
-          total_zones: village.total_zones || 0,
-          total_equipment: village.total_equipment || 0,
-          zones: village.zones || [],
-          created_at: village.created_at,
-          updated_at: village.updated_at
-        }));
-        
-        setVillages(formattedVillages);
-        
-        // ถ้ามีข้อมูลจำนวนทั้งหมด
-        if (response.data.pagination) {
-          setTotalCount(response.data.pagination.total || formattedVillages.length);
-        } else {
-          setTotalCount(formattedVillages.length);
-        }
-      } else {
-        throw new Error(response.data?.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้');
+  setLoading(true);
+  setError(null);
+
+  try {
+    // เรียกใช้ endpoint GET /villages
+    const response = await api.get('/villages', {
+      params: {
+        page: page + 1, // API อาจใช้ 1-based pagination
+        limit: rowsPerPage
       }
-    } catch (err) {
-      console.error('Error fetching villages:', err);
-      setError(err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหมู่บ้าน');
-      
-      // แสดงข้อความแจ้งเตือน
-      setNotification({
-        open: true,
-        message: `เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้'}`,
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
+    });
+    console.log(response.data)
+    if (response.data && response.data.success) {
+      // ปรับ format ข้อมูลให้ตรงกับโครงสร้างที่ต้องการ
+      const formattedVillages = response.data.data.map(village => ({
+        id: village.village_id,
+        village_id: village.village_id,
+        name: village.village_name,
+        village_code: village.village_code || '',
+        office_address: village.office_address || '',
+        village_number: village.village_number || '',
+        sub_district: village.sub_district || '',
+        district: village.district || '',
+        province: village.province || '',
+        postal_code: village.postal_code || '',
+        village_head: village.village_head || '',
+        village_head_email: village.village_head_email || '',
+        village_head_phone: village.village_head_phone || '',
+        contact_person: village.contact_person || '',
+        contact_email: village.contact_email || '',
+        contact_phone: village.contact_phone || '',
+        default_rate_per_unit: village.default_rate_per_unit || 30,
+        meter_rental_fee: village.meter_rental_fee || 20,
+        payment_due_date: village.payment_due_date || '15',
+        bank_name: village.bank_name || '',
+        account_number: village.account_number || '',
+        collector_name: village.collector_name || '',
+        // ⭐ เพิ่มการตั้งค่าทศนิยม
+        use_decimal_readings: village.use_decimal_readings || false,
+        decimal_places: village.decimal_places || 0,
+        // Stats from API
+        total_residents: village.total_residents || 0,
+        active_residents: village.active_residents || 0,
+        total_zones: village.total_zones || 0,
+        total_equipment: village.total_equipment || 0,
+        zones: village.zones || [],
+        created_at: village.created_at,
+        updated_at: village.updated_at
+      }));
+
+      setVillages(formattedVillages);
+
+      // ถ้ามีข้อมูลจำนวนทั้งหมด
+      if (response.data.pagination) {
+        setTotalCount(response.data.pagination.total || formattedVillages.length);
+      } else {
+        setTotalCount(formattedVillages.length);
+      }
+    } else {
+      throw new Error(response.data?.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้');
     }
-  };
+  } catch (err) {
+    console.error('Error fetching villages:', err);
+    setError(err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหมู่บ้าน');
+
+    // แสดงข้อความแจ้งเตือน
+    setNotification({
+      open: true,
+      message: `เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้'}`,
+      severity: 'error'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // การจัดการหน้า pagination
   const handleChangePage = (event, newPage) => {
@@ -625,7 +638,9 @@ const VillageManagement = () => {
       payment_due_date: '15',
       bank_name: '',
       account_number: '',
-      collector_name: ''
+      collector_name: '',
+      use_decimal_readings: false,
+      decimal_places: 0
     });
     setOpenDialog(true);
   };
@@ -654,7 +669,9 @@ const VillageManagement = () => {
       payment_due_date: village.payment_due_date,
       bank_name: village.bank_name,
       account_number: village.account_number,
-      collector_name: village.collector_name
+      collector_name: village.collector_name,
+      use_decimal_readings: village.use_decimal_readings || false,
+      decimal_places: village.decimal_places || 0
     });
     setOpenDialog(true);
   };
@@ -705,10 +722,10 @@ const VillageManagement = () => {
     }
 
     setLoading(true);
-    
+
     try {
       let response;
-      
+
       // ข้อมูลที่จะส่งไปยัง API
       const villageData = {
         village_name: currentVillage.village_name,
@@ -730,9 +747,11 @@ const VillageManagement = () => {
         payment_due_date: currentVillage.payment_due_date,
         bank_name: currentVillage.bank_name,
         account_number: currentVillage.account_number,
-        collector_name: currentVillage.collector_name
+        collector_name: currentVillage.collector_name,
+        use_decimal_readings: currentVillage.use_decimal_readings,
+        decimal_places: currentVillage.use_decimal_readings ? parseInt(currentVillage.decimal_places) : 0
       };
-      
+
       if (editMode) {
         // แก้ไขหมู่บ้าน - PUT /villages/:id
         response = await api.put(`/villages/${currentVillage.village_id}`, villageData);
@@ -740,7 +759,7 @@ const VillageManagement = () => {
         // เพิ่มหมู่บ้านใหม่ - POST /villages
         response = await api.post('/villages', villageData);
       }
-      
+
       if (response.data && response.data.success) {
         // โหลดข้อมูลหมู่บ้านใหม่
         fetchVillages();
@@ -752,7 +771,7 @@ const VillageManagement = () => {
         } catch (err) {
           console.log('EventBus not available');
         }
-        
+
         // แสดงข้อความแจ้งเตือน
         setNotification({
           open: true,
@@ -764,7 +783,7 @@ const VillageManagement = () => {
       }
     } catch (err) {
       console.error('Error saving village:', err);
-      
+
       // แสดงข้อความแจ้งเตือน
       setNotification({
         open: true,
@@ -781,15 +800,15 @@ const VillageManagement = () => {
   const handleDeleteVillage = async (id) => {
     if (window.confirm('คุณต้องการลบหมู่บ้านนี้ใช่หรือไม่? การลบจะไม่สามารถกู้คืนได้')) {
       setLoading(true);
-      
+
       try {
         // ลบหมู่บ้าน - DELETE /villages/:id
         const response = await api.delete(`/villages/${id}`);
-        
+
         if (response.data && response.data.success) {
           // โหลดข้อมูลหมู่บ้านใหม่
           fetchVillages();
-          
+
           // Event bus ถ้ามี
           try {
             const { default: eventBus } = await import('../utils/eventBus');
@@ -797,7 +816,7 @@ const VillageManagement = () => {
           } catch (err) {
             console.log('EventBus not available');
           }
-          
+
           // แสดงข้อความแจ้งเตือน
           setNotification({
             open: true,
@@ -809,7 +828,7 @@ const VillageManagement = () => {
         }
       } catch (err) {
         console.error('Error deleting village:', err);
-        
+
         // แสดงข้อความแจ้งเตือน
         setNotification({
           open: true,
@@ -871,17 +890,17 @@ const VillageManagement = () => {
 
         {/* ปุ่มเพิ่มหมู่บ้าน */}
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenDialog}
             disabled={loading}
           >
             เพิ่มหมู่บ้าน
           </Button>
-          
-          <Button 
-            variant="outlined" 
+
+          <Button
+            variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={fetchVillages}
             disabled={loading}
@@ -919,6 +938,8 @@ const VillageManagement = () => {
                 <TableCell>จังหวัด</TableCell>
                 <TableCell>ผู้อยู่อาศัย</TableCell>
                 <TableCell>โซน</TableCell>
+                <TableCell>รูปแบบการจด</TableCell> {/* เพิ่มคอลัมน์ */}
+
                 <TableCell>สถานะ</TableCell>
                 <TableCell>จัดการ</TableCell>
               </TableRow>
@@ -929,9 +950,9 @@ const VillageManagement = () => {
                   <TableRow key={village.id}>
                     <TableCell>{village.village_id}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={village.village_code || 'ไม่มีรหัส'} 
-                        size="small" 
+                      <Chip
+                        label={village.village_code || 'ไม่มีรหัส'}
+                        size="small"
                         color={village.village_code ? "default" : "error"}
                         variant="outlined"
                       />
@@ -962,24 +983,37 @@ const VillageManagement = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={`${village.total_zones || 0} โซน`} 
-                        size="small" 
-                        color="primary" 
+                      <Chip
+                        label={`${village.total_zones || 0} โซน`}
+                        size="small"
+                        color="primary"
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label="ใช้งาน" 
-                        size="small" 
+                      <Chip
+                        icon={<CalculateIcon />}
+                        label={
+                          village.use_decimal_readings
+                            ? `ทศนิยม ${village.decimal_places} ตำแหน่ง`
+                            : 'จำนวนเต็ม'
+                        }
+                        size="small"
+                        color={village.use_decimal_readings ? "secondary" : "default"}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label="ใช้งาน"
+                        size="small"
                         color="success"
                       />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton 
-                          color="primary" 
+                        <IconButton
+                          color="primary"
                           size="small"
                           onClick={() => handleEditVillage(village)}
                           disabled={loading}
@@ -987,15 +1021,15 @@ const VillageManagement = () => {
                         >
                           <EditIcon />
                         </IconButton>
-                        <IconButton 
-                          color="info" 
+                        <IconButton
+                          color="info"
                           size="small"
                           title="ดูรายละเอียด"
                         >
                           <InfoIcon />
                         </IconButton>
-                        <IconButton 
-                          color="error" 
+                        <IconButton
+                          color="error"
                           size="small"
                           onClick={() => handleDeleteVillage(village.village_id)}
                           disabled={loading}
@@ -1016,7 +1050,7 @@ const VillageManagement = () => {
               )}
             </TableBody>
           </Table>
-          
+
           {/* Pagination */}
           <TablePagination
             rowsPerPageOptions={[5, 10, 25, 50]}
@@ -1043,7 +1077,7 @@ const VillageManagement = () => {
                 <HomeIcon sx={{ mr: 1 }} />
                 ข้อมูลพื้นฐาน
               </Typography>
-              
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -1107,7 +1141,7 @@ const VillageManagement = () => {
                 <PeopleIcon sx={{ mr: 1 }} />
                 ข้อมูลประธานหมู่บ้าน*
               </Typography>
-              
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12}>
                   <TextField
@@ -1146,7 +1180,7 @@ const VillageManagement = () => {
                 <PeopleIcon sx={{ mr: 1 }} />
                 ข้อมูลผู้ติดต่อ
               </Typography>
-              
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12}>
                   <TextField
@@ -1185,7 +1219,7 @@ const VillageManagement = () => {
                 <WaterIcon sx={{ mr: 1 }} />
                 ข้อมูลการเงิน
               </Typography>
-              
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={4}>
                   <TextField
@@ -1247,15 +1281,178 @@ const VillageManagement = () => {
                   />
                 </Grid>
               </Grid>
+              <Divider sx={{ my: 3 }} />
 
+              {/* ตั้งค่าการจดมิเตอร์ */}
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                <CalculateIcon sx={{ mr: 1 }} />
+                ตั้งค่าการจดมิเตอร์
+              </Typography>
+
+              <Box sx={{ mb: 3, p: 3, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={currentVillage.use_decimal_readings}
+                      onChange={(e) => {
+                        setCurrentVillage({
+                          ...currentVillage,
+                          use_decimal_readings: e.target.checked,
+                          decimal_places: e.target.checked ? 2 : 0 // default เป็น 2 ตำแหน่งเมื่อเปิดใช้
+                        });
+                      }}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" fontWeight="medium">
+                        เปิดใช้งานการจดมิเตอร์แบบทศนิยม
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {currentVillage.use_decimal_readings
+                          ? 'ระบบจะรองรับการบันทึกค่าทศนิยม เช่น 150.25 หน่วย'
+                          : 'ระบบจะบันทึกเฉพาะจำนวนเต็ม เช่น 150 หน่วย'}
+                      </Typography>
+                    </Box>
+                  }
+                />
+
+                {currentVillage.use_decimal_readings && (
+                  <Box sx={{ mt: 3, pl: 2 }}>
+                    <FormControl component="fieldset">
+                      <FormLabel component="legend">
+                        <Typography variant="body2" fontWeight="medium">
+                          จำนวนตำแหน่งทศนิยม
+                        </Typography>
+                      </FormLabel>
+                      <RadioGroup
+                        row
+                        value={currentVillage.decimal_places.toString()}
+                        onChange={(e) => {
+                          setCurrentVillage({
+                            ...currentVillage,
+                            decimal_places: parseInt(e.target.value)
+                          });
+                        }}
+                      >
+                        <FormControlLabel
+                          value="1"
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body2">1 ตำแหน่ง</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                เช่น 150.5
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <FormControlLabel
+                          value="2"
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body2">2 ตำแหน่ง</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                เช่น 150.25
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <FormControlLabel
+                          value="3"
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="body2">3 ตำแหน่ง</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                เช่น 150.125
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </RadioGroup>
+                      <FormHelperText>
+                        เลือกจำนวนตำแหน่งทศนิยมที่ต้องการใช้สำหรับการจดมิเตอร์ในหมู่บ้านนี้
+                      </FormHelperText>
+                    </FormControl>
+
+                    {/* ตัวอย่างการแสดงผล */}
+                    <Box sx={{ mt: 3, p: 2, bgcolor: 'info.lighter', borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight="medium" gutterBottom>
+                        📊 ตัวอย่างการแสดงผล:
+                      </Typography>
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} sm={4}>
+                          <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              ค่าก่อนหน้า
+                            </Typography>
+                            <Typography variant="h6">
+                              {(100).toFixed(currentVillage.decimal_places)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              ค่าปัจจุบัน
+                            </Typography>
+                            <Typography variant="h6">
+                              {(150.625).toFixed(currentVillage.decimal_places)}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <Paper sx={{ p: 2, bgcolor: 'success.lighter' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              การใช้น้ำ
+                            </Typography>
+                            <Typography variant="h6" color="success.main">
+                              {(50.625).toFixed(currentVillage.decimal_places)} หน่วย
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      </Grid>
+                    </Box>
+
+                    {/* คำเตือน */}
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        ⚠️ <strong>คำเตือน:</strong> การเปลี่ยนแปลงการตั้งค่านี้จะมีผลกับการจดมิเตอร์ครั้งถัดไป
+                        ข้อมูลเก่าจะยังคงรูปแบบเดิม
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
+              </Box>
+              {currentVillage.use_decimal_readings && (
+                <Box sx={{ mb: 3, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    💡 <strong>ข้อมูลเพิ่มเติม:</strong>
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 3, mt: 1 }}>
+                    <Typography component="li" variant="body2" color="text.secondary">
+                      ระบบจะตรวจสอบความถูกต้องของค่าทศนิยมอัตโนมัติ
+                    </Typography>
+                    <Typography component="li" variant="body2" color="text.secondary">
+                      ค่าน้ำจะถูกคำนวณแบบทศนิยมและปัดเศษตามที่กำหนด
+                    </Typography>
+                    <Typography component="li" variant="body2" color="text.secondary">
+                      รายงานและใบแจ้งหนี้จะแสดงค่าตามรูปแบบที่ตั้งไว้
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog} disabled={loading}>
               ยกเลิก
             </Button>
-            <Button 
-              onClick={handleSaveVillage} 
+            <Button
+              onClick={handleSaveVillage}
               variant="contained"
               disabled={loading}
               startIcon={loading ? <CircularProgress size={20} /> : null}
@@ -1266,14 +1463,14 @@ const VillageManagement = () => {
         </Dialog>
 
         {/* Notification */}
-        <Snackbar 
-          open={notification.open} 
-          autoHideDuration={6000} 
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
           onClose={handleCloseNotification}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          <Alert 
-            onClose={handleCloseNotification} 
+          <Alert
+            onClose={handleCloseNotification}
             severity={notification.severity}
             sx={{ width: '100%' }}
           >
@@ -1282,7 +1479,9 @@ const VillageManagement = () => {
         </Snackbar>
       </Box>
     </Box>
+
   );
 };
+
 
 export default VillageManagement;
