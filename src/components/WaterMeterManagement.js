@@ -514,8 +514,8 @@ function WaterMeterManagement({ user, currentVillage }) {
                             id="current_reading"
                             name="current_reading"
                             type="number"
-                            step="0.01"
-                            min="0"
+                            step="0.001"
+                            
                             placeholder="เลขที่แสดงบนหน้าปัดมิเตอร์ (เช่น 123.45)"
                             value={formData.current_reading}
                             onChange={handleInputChange}
