@@ -2,12 +2,14 @@
 import axios from 'axios';
 
 // กำหนดค่าเริ่มต้นสำหรับ axios
-const API_BASE_URL = 'https://api.abchomey.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://api.abchomey.com/api';
+const API_TIMEOUT = parseInt(process.env.REACT_APP_TIMEOUT) || 15000;
 
+export { API_BASE_URL, API_TIMEOUT };
 // สร้าง instance ของ axios
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   }

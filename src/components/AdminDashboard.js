@@ -369,7 +369,7 @@ function AdminDashboard({ user, currentVillage }) {
             <div>
               <div className="text-sm text-gray-600 mb-2">ชำระเงินแล้ว</div>
               <div className="text-2xl font-bold text-green-600">
-                {dashboardData.billingStats.paidBills || 0} รายการ ({(dashboardData.billingStats.paidBills/dashboardData.paymentStatus.paidMeters)*100}%)
+                {dashboardData.billingStats.paidBills || 0} รายการ ({((dashboardData.billingStats.paidBills/dashboardData.paymentStatus.paidMeters)*100).toFixed(2)}%)
               </div>
               <div className="text-sm text-gray-500">
                 จำนวนเงิน {(dashboardData.billingStats.paidAmount || 0).toLocaleString()} บาท
@@ -378,7 +378,7 @@ function AdminDashboard({ user, currentVillage }) {
             <div>
               <div className="text-sm text-gray-600 mb-2">ค้างชำระเงิน</div>
               <div className="text-2xl font-bold text-red-600">
-                {((dashboardData.paymentStatus.paidMeters || 0) - (dashboardData.billingStats.paidBills || 0))} รายการ ({(((dashboardData.paymentStatus.paidMeters || 0) - (dashboardData.billingStats.paidBills || 0))/dashboardData.paymentStatus.paidMeters)*100}%)
+                {((dashboardData.paymentStatus.paidMeters || 0) - (dashboardData.billingStats.paidBills || 0))} รายการ ({((((dashboardData.paymentStatus.paidMeters || 0) - (dashboardData.billingStats.paidBills || 0))/dashboardData.paymentStatus.paidMeters)*100).toFixed(2)}%)
               </div>
               <div className="text-sm text-gray-500">
                 จำนวนเงิน {(dashboardData.billingStats.unpaidAmount || 0).toLocaleString()} บาท

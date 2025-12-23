@@ -4,10 +4,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { billingService } from '../services/api';
+import {API_BASE_URL, billingService } from '../services/api';
 
-// กำหนดค่า API URL
-const API_BASE_URL = 'https://api.abchomey.com/api';
+
 
 // DataTable Component (ไม่มีการเปลี่ยนแปลง)
 const MeterReadingsDataTable = ({ user, currentVillage, readings, onReadingClick, onVerifyReading, onExportCSV, onPrintBill, loading }) => {
@@ -521,7 +520,7 @@ const MeterReadingsDataTable = ({ user, currentVillage, readings, onReadingClick
               </tr>
             ) : (
               currentData.map((meter, index) => (
-                console.log(meter),
+               // console.log(meter),
                 <tr 
                   key={`${meter.meterId}-${meter.id || index}`} 
                   style={{
@@ -1071,10 +1070,12 @@ function MeterReadings({ user, currentVillage }) {
 
   // ฟังก์ชันอัพโหลดรูป
   const uploadImage = async (file) => {
+
+   
     const formData = new FormData();
     formData.append('image', file);
     formData.append('meter_id', selectedMeter.meterId);
-
+    
     try {
       const response = await axios.post(`${API_BASE_URL}/uploads/image`, formData, {
         headers: {
@@ -1082,8 +1083,7 @@ function MeterReadings({ user, currentVillage }) {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
-
-      return response.data.photo_url;
+      return response.data.image.url;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw new Error('ไม่สามารถอัพโหลดรูปภาพได้');
@@ -1550,8 +1550,9 @@ const handleReadingSubmit = async (e) => {
 
   try {
     let photoUrl = null;
-
+   
     if (selectedImage?.file) {
+      
       photoUrl = await uploadImage(selectedImage.file);
     } else if (selectedImage?.url) {
       photoUrl = selectedImage.url;

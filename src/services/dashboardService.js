@@ -1,7 +1,6 @@
 // src/services/dashboardService.js
 import axios from 'axios';
-
-const API_BASE_URL = 'https://api.abchomey.com/api';
+import { API_BASE_URL } from './api';
 
 // สร้าง axios instance พร้อม config พื้นฐาน
 const apiClient = axios.create({

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
 
 // เพิ่ม custom event สำหรับแจ้งการเข้าสู่ระบบ
 const LOGIN_SUCCESS_EVENT = 'loginSuccess';
@@ -275,7 +276,7 @@ const LoginPage = ({ onLogin }) => {
       }
 
       // ดึงข้อมูลแพ็คเกจของหมู่บ้าน
-      const response = await axios.get(`https://api.abchomey.com/api/villages/${villageId}/package-info`);
+      const response = await axios.get(`${API_BASE_URL}/villages/${villageId}/package-info`);
       console.log('Package info response:', response);
       
       if (response.data && response.data.success) {
@@ -336,7 +337,7 @@ const LoginPage = ({ onLogin }) => {
     
     try {
       // เรียกใช้ API login
-      const response = await axios.post('https://api.abchomey.com/api/auth/login', {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         username,
         password
       });

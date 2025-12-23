@@ -38,6 +38,7 @@ import {
   Radio,            // เพิ่ม
   FormHelperText    // เพิ่ม
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -67,7 +68,7 @@ const menuItems = [
 ];
 
 // กำหนดค่า API URL
-const API_BASE_URL = 'https://api.abchomey.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.abchomey.com/api';
 
 // Hook สำหรับจัดการข้อมูลที่อยู่
 const useAddressData = () => {
@@ -493,6 +494,8 @@ const VillageManagement = () => {
     use_decimal_readings: false,
     decimal_places: 0
   });
+  const [openDetailDialog, setOpenDetailDialog] = useState(false);
+  const [selectedVillageDetail, setSelectedVillageDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({
@@ -520,81 +523,113 @@ const VillageManagement = () => {
 
   // ดึงข้อมูลหมู่บ้านจาก API
   const fetchVillages = async () => {
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  try {
-    // เรียกใช้ endpoint GET /villages
-    const response = await api.get('/villages', {
-      params: {
-        page: page + 1, // API อาจใช้ 1-based pagination
-        limit: rowsPerPage
-      }
-    });
-    console.log(response.data)
-    if (response.data && response.data.success) {
-      // ปรับ format ข้อมูลให้ตรงกับโครงสร้างที่ต้องการ
-      const formattedVillages = response.data.data.map(village => ({
-        id: village.village_id,
-        village_id: village.village_id,
-        name: village.village_name,
-        village_code: village.village_code || '',
-        office_address: village.office_address || '',
-        village_number: village.village_number || '',
-        sub_district: village.sub_district || '',
-        district: village.district || '',
-        province: village.province || '',
-        postal_code: village.postal_code || '',
-        village_head: village.village_head || '',
-        village_head_email: village.village_head_email || '',
-        village_head_phone: village.village_head_phone || '',
-        contact_person: village.contact_person || '',
-        contact_email: village.contact_email || '',
-        contact_phone: village.contact_phone || '',
-        default_rate_per_unit: village.default_rate_per_unit || 30,
-        meter_rental_fee: village.meter_rental_fee || 20,
-        payment_due_date: village.payment_due_date || '15',
-        bank_name: village.bank_name || '',
-        account_number: village.account_number || '',
-        collector_name: village.collector_name || '',
-        // ⭐ เพิ่มการตั้งค่าทศนิยม
-        use_decimal_readings: village.use_decimal_readings || false,
-        decimal_places: village.decimal_places || 0,
-        // Stats from API
-        total_residents: village.total_residents || 0,
-        active_residents: village.active_residents || 0,
-        total_zones: village.total_zones || 0,
-        total_equipment: village.total_equipment || 0,
-        zones: village.zones || [],
-        created_at: village.created_at,
-        updated_at: village.updated_at
-      }));
+    try {
+      // เรียกใช้ endpoint GET /villages
+      const response = await api.get('/villages', {
+        params: {
+          page: page + 1, // API อาจใช้ 1-based pagination
+          limit: rowsPerPage
+        }
+      });
+      console.log(response.data)
+      if (response.data && response.data.success) {
+        // ปรับ format ข้อมูลให้ตรงกับโครงสร้างที่ต้องการ
+        const formattedVillages = response.data.data.map(village => ({
+          id: village.village_id,
+          village_id: village.village_id,
+          name: village.village_name,
+          village_code: village.village_code || '',
+          office_address: village.office_address || '',
+          village_number: village.village_number || '',
+          sub_district: village.sub_district || '',
+          district: village.district || '',
+          province: village.province || '',
+          postal_code: village.postal_code || '',
+          village_head: village.village_head || '',
+          village_head_email: village.village_head_email || '',
+          village_head_phone: village.village_head_phone || '',
+          contact_person: village.contact_person || '',
+          contact_email: village.contact_email || '',
+          contact_phone: village.contact_phone || '',
+          default_rate_per_unit: village.default_rate_per_unit || 30,
+          meter_rental_fee: village.meter_rental_fee || 20,
+          payment_due_date: village.payment_due_date || '15',
+          bank_name: village.bank_name || '',
+          account_number: village.account_number || '',
+          collector_name: village.collector_name || '',
+          // ⭐ เพิ่มการตั้งค่าทศนิยม
+          use_decimal_readings: village.use_decimal_readings || false,
+          decimal_places: village.decimal_places || 0,
+          // Stats from API
+          total_residents: village.total_residents || 0,
+          active_residents: village.active_residents || 0,
+          total_zones: village.total_zones || 0,
+          total_equipment: village.total_equipment || 0,
+          zones: village.zones || [],
+          created_at: village.created_at,
+          updated_at: village.updated_at
+        }));
 
-      setVillages(formattedVillages);
+        setVillages(formattedVillages);
 
-      // ถ้ามีข้อมูลจำนวนทั้งหมด
-      if (response.data.pagination) {
-        setTotalCount(response.data.pagination.total || formattedVillages.length);
+        // ถ้ามีข้อมูลจำนวนทั้งหมด
+        if (response.data.pagination) {
+          setTotalCount(response.data.pagination.total || formattedVillages.length);
+        } else {
+          setTotalCount(formattedVillages.length);
+        }
       } else {
-        setTotalCount(formattedVillages.length);
+        throw new Error(response.data?.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้');
       }
-    } else {
-      throw new Error(response.data?.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้');
-    }
-  } catch (err) {
-    console.error('Error fetching villages:', err);
-    setError(err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหมู่บ้าน');
+    } catch (err) {
+      console.error('Error fetching villages:', err);
+      setError(err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลหมู่บ้าน');
 
-    // แสดงข้อความแจ้งเตือน
-    setNotification({
-      open: true,
-      message: `เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้'}`,
-      severity: 'error'
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      // แสดงข้อความแจ้งเตือน
+      setNotification({
+        open: true,
+        message: `เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message || 'ไม่สามารถดึงข้อมูลหมู่บ้านได้'}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleViewDetail = async (village) => {
+    setLoading(true);
+    try {
+      // ดึงข้อมูลรายละเอียดจาก API
+      const response = await api.get(`/villages/${village.village_id}`);
+
+      if (response.data && response.data.success) {
+        setSelectedVillageDetail(response.data.data);
+        setOpenDetailDialog(true);
+      } else {
+        throw new Error('ไม่สามารถดึงข้อมูลรายละเอียดได้');
+      }
+    } catch (err) {
+      console.error('Error fetching village detail:', err);
+      setNotification({
+        open: true,
+        message: `เกิดข้อผิดพลาด: ${err.response?.data?.message || err.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ปิด Dialog รายละเอียด
+  const handleCloseDetailDialog = () => {
+    setOpenDetailDialog(false);
+    setSelectedVillageDetail(null);
+  };
+
 
   // การจัดการหน้า pagination
   const handleChangePage = (event, newPage) => {
@@ -1021,9 +1056,12 @@ const VillageManagement = () => {
                         >
                           <EditIcon />
                         </IconButton>
+                        
                         <IconButton
                           color="info"
                           size="small"
+                          onClick={() => handleViewDetail(village)}
+                          disabled={loading}
                           title="ดูรายละเอียด"
                         >
                           <InfoIcon />
@@ -1477,6 +1515,363 @@ const VillageManagement = () => {
             {notification.message}
           </Alert>
         </Snackbar>
+
+
+        <Dialog
+          open={openDetailDialog}
+          onClose={handleCloseDetailDialog}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <HomeIcon sx={{ mr: 1 }} />
+              <Typography variant="h6">รายละเอียดหมู่บ้าน</Typography>
+            </Box>
+            <IconButton
+              onClick={handleCloseDetailDialog}
+              sx={{ color: 'white' }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent sx={{ mt: 2 }}>
+            {selectedVillageDetail ? (
+              <Box>
+                {/* ส่วนหัว - ข้อมูลหลัก */}
+                <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.lighter' }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={8}>
+                      <Typography variant="h4" gutterBottom>
+                        {selectedVillageDetail.village_name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Chip
+                          icon={<LocationCityIcon />}
+                          label={`รหัส: ${selectedVillageDetail.village_code}`}
+                          color="primary"
+                        />
+                        {selectedVillageDetail.village_number && (
+                          <Chip
+                            label={`หมู่ ${selectedVillageDetail.village_number}`}
+                            variant="outlined"
+                          />
+                        )}
+                        <Chip
+                          label="สถานะ: ใช้งาน"
+                          color="success"
+                        />
+                      </Box>
+                    </Grid>
+                    
+                  </Grid>
+                </Paper>
+
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ข้อมูลที่อยู่ */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    ข้อมูลที่อยู่
+                  </Typography>
+                  <Paper sx={{ p: 3 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">ที่อยู่ที่ทำการ</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.office_address || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">ตำบล/แขวง</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.sub_district || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">อำเภอ/เขต</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.district || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">จังหวัด</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.province || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">รหัสไปรษณีย์</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.postal_code || '-'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ข้อมูลประธานหมู่บ้าน */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <PeopleIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    ข้อมูลประธานหมู่บ้าน
+                  </Typography>
+                  <Paper sx={{ p: 3 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">ชื่อ-นามสกุล</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.village_head || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">อีเมล</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.village_head_email || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">โทรศัพท์</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.village_head_phone || '-'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ข้อมูลผู้ติดต่อ */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <PeopleIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    ข้อมูลผู้ติดต่อ
+                  </Typography>
+                  <Paper sx={{ p: 3 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">ชื่อ-นามสกุล</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.contact_person || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">อีเมล</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.contact_email || '-'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">โทรศัพท์</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.contact_phone || '-'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ข้อมูลการเงิน */}
+                {/* ข้อมูลการเงิน */}
+<Box sx={{ mb: 3 }}>
+  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+    <WaterIcon sx={{ mr: 1, color: 'primary.main' }} />
+    ข้อมูลการเงิน
+  </Typography>
+  <Paper sx={{ p: 3 }}>
+    <Grid container spacing={3}>
+      <Grid item xs={12} sm={6} md={4}>
+        <Box sx={{ p: 2, bgcolor: 'info.lighter', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">ราคาต่อหน่วย</Typography>
+          <Typography variant="h5" color="info.main">
+            {selectedVillageDetail.default_rate_per_unit 
+              ? Number(selectedVillageDetail.default_rate_per_unit).toFixed(2)
+              : '0.00'
+            } ฿
+          </Typography>
+        </Box>
+      </Grid>
+      <Grid item xs={12} sm={6} md={4}>
+        <Box sx={{ p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">ค่าเช่ามิเตอร์</Typography>
+          <Typography variant="h5" color="warning.main">
+            {selectedVillageDetail.meter_rental_fee 
+              ? Number(selectedVillageDetail.meter_rental_fee).toFixed(2)
+              : '0.00'
+            } ฿
+          </Typography>
+        </Box>
+      </Grid>
+      <Grid item xs={12} sm={6} md={4}>
+        <Box sx={{ p: 2, bgcolor: 'error.lighter', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">กำหนดชำระ</Typography>
+          <Typography variant="h5" color="error.main">
+            วันที่ {selectedVillageDetail.payment_due_date || '-'}
+          </Typography>
+        </Box>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Typography variant="body2" color="text.secondary">ธนาคาร</Typography>
+        <Typography variant="body1">
+          {selectedVillageDetail.bank_name || '-'}
+        </Typography>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Typography variant="body2" color="text.secondary">เลขที่บัญชี</Typography>
+        <Typography variant="body1">
+          {selectedVillageDetail.account_number || '-'}
+        </Typography>
+      </Grid>
+      <Grid item xs={12}>
+        <Typography variant="body2" color="text.secondary">ชื่อผู้เก็บเงิน</Typography>
+        <Typography variant="body1">
+          {selectedVillageDetail.collector_name || '-'}
+        </Typography>
+      </Grid>
+    </Grid>
+  </Paper>
+</Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ตั้งค่าการจดมิเตอร์ */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <CalculateIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    ตั้งค่าการจดมิเตอร์
+                  </Typography>
+                  <Paper sx={{ p: 3 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                            รูปแบบการจด:
+                          </Typography>
+                          <Chip
+                            icon={<CalculateIcon />}
+                            label={
+                              selectedVillageDetail.use_decimal_readings
+                                ? `ทศนิยม ${selectedVillageDetail.decimal_places} ตำแหน่ง`
+                                : 'จำนวนเต็ม'
+                            }
+                            color={selectedVillageDetail.use_decimal_readings ? "secondary" : "default"}
+                            size="small"
+                          />
+                        </Box>
+                        {selectedVillageDetail.use_decimal_readings && (
+                          <Alert severity="info" sx={{ mt: 1 }}>
+                            <Typography variant="body2">
+                              ระบบจะรองรับการบันทึกค่าทศนิยม {selectedVillageDetail.decimal_places} ตำแหน่ง
+                              <br />
+                              ตัวอย่าง: 150.{Array(selectedVillageDetail.decimal_places).fill('0').join('')}
+                            </Typography>
+                          </Alert>
+                        )}
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Box>
+
+                {/* โซนต่างๆ ในหมู่บ้าน */}
+                {selectedVillageDetail.zones && selectedVillageDetail.zones.length > 0 && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                        <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        โซนในหมู่บ้าน ({selectedVillageDetail.zones.length} โซน)
+                      </Typography>
+                      <Grid container spacing={2}>
+                        {selectedVillageDetail.zones.map((zone, index) => (
+                          <Grid item xs={12} sm={6} md={4} key={index}>
+                            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                {zone.zone_name || `โซน ${index + 1}`}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {zone.description || 'ไม่มีคำอธิบาย'}
+                              </Typography>
+                              {zone.resident_count !== undefined && (
+                                <Chip
+                                  size="small"
+                                  label={`${zone.resident_count} ครัวเรือน`}
+                                  sx={{ mt: 1 }}
+                                />
+                              )}
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </>
+                )}
+
+                {/* ข้อมูลระบบ */}
+                <Divider sx={{ my: 3 }} />
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <SettingsIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    ข้อมูลระบบ
+                  </Typography>
+                  <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">วันที่สร้าง</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.created_at
+                            ? new Date(selectedVillageDetail.created_at).toLocaleString('th-TH')
+                            : '-'
+                          }
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">อัพเดทล่าสุด</Typography>
+                        <Typography variant="body1">
+                          {selectedVillageDetail.updated_at
+                            ? new Date(selectedVillageDetail.updated_at).toLocaleString('th-TH')
+                            : '-'
+                          }
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+                <CircularProgress />
+              </Box>
+            )}
+          </DialogContent>
+
+          <DialogActions sx={{ p: 3, bgcolor: 'background.default' }}>
+            <Button
+              onClick={() => {
+                handleCloseDetailDialog();
+                handleEditVillage(selectedVillageDetail);
+              }}
+              startIcon={<EditIcon />}
+              variant="outlined"
+              color="primary"
+            >
+              แก้ไขข้อมูล
+            </Button>
+            <Button
+              onClick={handleCloseDetailDialog}
+              variant="contained"
+            >
+              ปิด
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
 

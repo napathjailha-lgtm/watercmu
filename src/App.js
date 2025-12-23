@@ -22,6 +22,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import eventBus from './utils/eventBus';
 
 import './App.css';
+import { API_BASE_URL } from './services/api';
 
 // Component สำหรับแสดงการแจ้งเตือนแพ็คเกจ
 const PackageAlert = ({ packageInfo, onClose, onMarkAsRead, user }) => {
@@ -374,7 +375,7 @@ function App() {
 
       // ดึงข้อมูลแพ็คเกจของหมู่บ้าน พร้อมส่ง token
       const response = await axios.get(
-        `https://api.abchomey.com/api/villages/${villageId}/package-info`,
+        `${API_BASE_URL}/villages/${villageId}/package-info`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

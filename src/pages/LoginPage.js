@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
 
 // เพิ่ม custom event สำหรับแจ้งการเข้าสู่ระบบ
 const LOGIN_SUCCESS_EVENT = 'loginSuccess';
@@ -189,7 +190,7 @@ const LoginPage = ({ onLogin }) => {
       }
 
       // ดึงข้อมูลแพ็คเกจของหมู่บ้าน
-      const response = await axios.get(`http://127.0.0.1:3001/api/villages/${userData.village_id || userData.assigned_village_id}/package-info`);
+      const response = await axios.get(`${API_BASE_URL}/villages/${userData.village_id || userData.assigned_village_id}/package-info`);
       console.log('Package info response:', response);
       if (response.data && response.data.success) {
         const packageData = response.data.data;
@@ -240,7 +241,7 @@ const LoginPage = ({ onLogin }) => {
     
     try {
       // เรียกใช้ API login
-      const response = await axios.post('http://127.0.0.1:3001/api/auth/login', {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         username,
         password
       });
